@@ -1,11 +1,13 @@
 package slicer
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"log"
 
@@ -52,4 +54,30 @@ func (c *Client) GetMapping(ctx context.Context) (map[model.Range]model.Host, er
 		res[model.Range{From: v.KeyRange.From, To: v.KeyRange.To}] = v.Address
 	}
 	return res, nil
+}
+
+func (c *Client) NotifyState(ctx context.Context, state model.HostState) error {
+	jsonBody, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+	bodyReader := bytes.NewReader(jsonBody)
+
+	requestURL := fmt.Sprintf("http://%s:%s/update_state", c.host, c.port)
+	req, err := http.NewRequest(http.MethodPost, requestURL, bodyReader)
+	if err != nil {
+		log.Println("http client error: %v", err)
+		return err
+	}
+
+	client := http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	_, err = client.Do(req)
+	if err != nil {
+		fmt.Printf("client: error making http request: %s\n", err)
+		return err
+	}
+	return nil
 }

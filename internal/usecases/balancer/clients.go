@@ -8,4 +8,5 @@ import (
 
 type SlicerClient interface {
 	GetMapping(ctx context.Context) (map[model.Range]model.Host, error)
+	NotifyState(ctx context.Context, state model.HostState) error
 }
