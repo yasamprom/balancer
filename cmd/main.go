@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	log.Println("Start main...")
+	log.Println("Balancer: start main...")
 	appCtx := context.Background()
 	slicerClient := slicer.New(
 		slicer.Config{
@@ -20,8 +20,8 @@ func main() {
 	)
 	uc := balancer.NewUsecases(slicerClient)
 	tickers := executor.TickersConfig{
-		MappingTick: 5 * time.Second,
-		StateTick:   10 * time.Second,
+		MappingTick: 50 * time.Second,
+		StateTick:   100 * time.Second,
 	}
 	executor := executor.New(&executor.Config{
 		Usecases: *uc,
@@ -29,4 +29,5 @@ func main() {
 	})
 	executor.RunMappingManager(appCtx)
 	executor.RunStateManager(appCtx)
+	executor.StartHandle(appCtx)
 }

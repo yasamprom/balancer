@@ -67,7 +67,7 @@ func (ex Executor) RunMappingManager(ctx context.Context) {
 			}
 		}
 	}()
-	wg.Wait()
+	// wg.Wait()
 }
 
 func (ex Executor) RunStateManager(ctx context.Context) {
@@ -92,5 +92,5 @@ func (ex Executor) RunStateManager(ctx context.Context) {
 			}
 		}
 	}()
-	wg.Wait()
+	// wg.Wait()
 }
