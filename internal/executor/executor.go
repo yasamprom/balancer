@@ -10,6 +10,8 @@ import (
 	balancer "github.com/yasamprom/balancer/internal/usecases/balancer"
 )
 
+const statsPeriod = 30 * time.Second
+
 // Config for initializing Executor
 type Config struct {
 	Usecases balancer.Usecases
@@ -26,6 +28,7 @@ type TickersConfig struct {
 type Executor struct {
 	uc         balancer.Usecases
 	mapping    Mapping
+	history    model.History
 	httpClient httpClient
 	tickers    TickersConfig
 }
@@ -39,6 +42,9 @@ func New(config *Config) *Executor {
 		},
 		httpClient: httpClient{},
 		tickers:    config.Tickers,
+		history: model.History{
+			Ranges: make(map[model.Range][]time.Time),
+		},
 	}
 }
 
@@ -67,7 +73,6 @@ func (ex Executor) RunMappingManager(ctx context.Context) {
 			}
 		}
 	}()
-	// wg.Wait()
 }
 
 func (ex Executor) RunStateManager(ctx context.Context) {
@@ -92,5 +97,29 @@ func (ex Executor) RunStateManager(ctx context.Context) {
 			}
 		}
 	}()
-	// wg.Wait()
+}
+
+// RunStatsCountManager sends stats to Slicer
+func (ex Executor) RunStatsCountManager(ctx context.Context) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+
+		ctx = context.Background()
+		ticker := time.NewTicker(ex.tickers.StateTick)
+		done := make(chan bool)
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				err := ex.uc.SendStats(ctx, ex.history.CountPerPeriod(statsPeriod))
+				if err != nil {
+					log.Println(ctx, "failed to notify state: ", err)
+				}
+
+			}
+		}
+	}()
 }

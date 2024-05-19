@@ -30,9 +30,9 @@ func New(cfg Config) *Client {
 
 func (c *Client) GetMapping(ctx context.Context) (map[model.Range]model.Host, error) {
 
-	resp, err := http.Get(fmt.Sprintf("http://%s:%s/get_mapping", c.host, c.port))
+	resp, err := http.Get(fmt.Sprintf("http://%s:%s/api/v1/get_mapping", c.host, c.port))
 	if err != nil {
-		log.Println("http client error: %v", err)
+		log.Printf("http client error: %v", err)
 		return nil, err
 	}
 
@@ -47,7 +47,7 @@ func (c *Client) GetMapping(ctx context.Context) (map[model.Range]model.Host, er
 		log.Println(ctx, "failed to unmarshal response: %v", err)
 	}
 
-	log.Println(ctx, "got new ranges: %v", ranges)
+	log.Printf("got new ranges: %v", ranges)
 	res := make(map[model.Range]model.Host)
 
 	for _, v := range ranges {
@@ -66,7 +66,33 @@ func (c *Client) NotifyState(ctx context.Context, state model.HostState) error {
 	requestURL := fmt.Sprintf("http://%s:%s/update_state", c.host, c.port)
 	req, err := http.NewRequest(http.MethodPost, requestURL, bodyReader)
 	if err != nil {
-		log.Println("http client error: %v", err)
+		log.Printf("http client error: %v", err)
+		return err
+	}
+
+	client := http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	_, err = client.Do(req)
+	if err != nil {
+		fmt.Printf("client: error making http request: %s\n", err)
+		return err
+	}
+	return nil
+}
+
+func (c *Client) SendStats(ctx context.Context, stats map[model.Range]int) error {
+	jsonBody, err := json.Marshal(stats)
+	if err != nil {
+		return err
+	}
+	bodyReader := bytes.NewReader(jsonBody)
+
+	requestURL := fmt.Sprintf("http://%s:%s/send_stats", c.host, c.port)
+	req, err := http.NewRequest(http.MethodPost, requestURL, bodyReader)
+	if err != nil {
+		log.Printf("http client error: %v", err)
 		return err
 	}
 

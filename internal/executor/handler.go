@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/yasamprom/balancer/internal/model"
 )
@@ -34,30 +35,33 @@ func (ex *Executor) StartHandle(ctx context.Context) error {
 			return
 		}
 
-		targetHost := ex.getHost(key)
+		// find host for redirecting query and update stats history
+		keyRange, targetHost := ex.getHost(key)
+		ex.history.Add(keyRange, time.Now())
+
 		if targetHost.Address == "" {
-			w.Write([]byte("{\"response\": 400, \"status\": \"No worker for provided key.\"}"))
+			w.Write([]byte("{\"response\": 400, \"message\": \"No worker for provided key.\"}"))
 			return
 		}
 
 		targetReq, err := buildTargetRequest(*r, targetHost.Address, servePort)
 		if err != nil {
 			log.Printf("failed to construct target request: %v", err)
-			w.Write([]byte("{\"response\": 500, \"status\": \"Failed to redirect request.\"}"))
+			w.Write([]byte("{\"response\": 500, \"message\": \"Failed to redirect request.\"}"))
 			return
 		}
 		resp, err := http.DefaultClient.Do(targetReq)
 		if err != nil {
-			w.Write([]byte("{\"response\": 500, \"status\": \"Failed to execute target request.\"}"))
+			w.Write([]byte("{\"response\": 500, \"message\": \"Failed to execute target request.\"}"))
 			return
 		}
 		var bytes []byte
 		_, err = resp.Body.Read(bytes)
 		if err != nil {
-			w.Write([]byte("{\"response\": 500, \"status\": \"Failed to read response.\"}"))
+			w.Write([]byte("{\"response\": 500, \"message\": \"Failed to read response.\"}"))
 			return
 		}
-		w.Write([]byte("{\"response\": 200, \"status\": \"done.\"}"))
+		w.Write([]byte("{\"response\": 200, \"message\": \"done.\"}"))
 
 	})
 
@@ -66,13 +70,13 @@ func (ex *Executor) StartHandle(ctx context.Context) error {
 	return nil
 }
 
-func (ex *Executor) getHost(key uint64) model.Host {
+func (ex *Executor) getHost(key uint64) (model.Range, model.Host) {
 	for r, host := range ex.mapping.mp {
 		if r.From <= key && key <= r.To {
-			return host
+			return r, host
 		}
 	}
-	return model.Host{}
+	return model.Range{}, model.Host{}
 }
 
 func buildTargetRequest(r http.Request, host, port string) (*http.Request, error) {
