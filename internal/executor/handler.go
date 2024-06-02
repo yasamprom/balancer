@@ -15,6 +15,8 @@ const (
 	routingHeader = "x-routing-key"
 	servePort     = "8080"
 	serveHost     = "0.0.0.0"
+	R             = 37
+	M             = 1000000007
 )
 
 func (ex *Executor) StartHandle(ctx context.Context) error {
@@ -34,6 +36,7 @@ func (ex *Executor) StartHandle(ctx context.Context) error {
 			w.Write([]byte("{\"response\": 400, \"status\": \"Failed to parse routing key.\"}"))
 			return
 		}
+		key = hashKey(key)
 
 		// find host for redirecting query and update stats history
 		keyRange, targetHost := ex.getHost(key)
@@ -61,7 +64,7 @@ func (ex *Executor) StartHandle(ctx context.Context) error {
 			w.Write([]byte("{\"response\": 500, \"message\": \"Failed to read response.\"}"))
 			return
 		}
-		w.Write([]byte("{\"response\": 200, \"message\": \"done.\"}"))
+		w.Write([]byte(bytes))
 
 	})
 
@@ -71,8 +74,9 @@ func (ex *Executor) StartHandle(ctx context.Context) error {
 }
 
 func (ex *Executor) getHost(key uint64) (model.Range, model.Host) {
+	log.Printf("Received key: %v. Current map: \n%v\n", key, ex.mapping.mp)
 	for r, host := range ex.mapping.mp {
-		if r.From <= key && key <= r.To {
+		if r.From <= key && key < r.To {
 			return r, host
 		}
 	}
@@ -87,4 +91,16 @@ func buildTargetRequest(r http.Request, host, port string) (*http.Request, error
 		return &http.Request{}, nil
 	}
 	return req, nil
+}
+
+func hashKey(key uint64) uint64 {
+	key = (^key) + (key << 21) // key = (key << 21) - key - 1
+	key = key ^ (key >> 24)
+	key = (key + (key << 3)) + (key << 8) // key * 265
+	key = key ^ (key >> 14)
+	key = (key + (key << 2)) + (key << 4) // key * 21
+	key = key ^ (key >> 28)
+	key = key + (key << 31)
+	return key
+
 }

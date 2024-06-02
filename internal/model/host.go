@@ -6,9 +6,13 @@ type Host struct {
 }
 
 // MapPair contains map: server -> key range
-type MapPair struct {
-	Address  Host
-	KeyRange Range
+type RangesNodePairs struct {
+	Pairs []NodePair `json:"RangeNodePairs"`
+}
+
+type NodePair struct {
+	Host     string `json:"Host"`
+	KeyRange Range  `json:"Range"`
 }
 
 // HostState contains base information about server

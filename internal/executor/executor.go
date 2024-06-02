@@ -27,7 +27,7 @@ type TickersConfig struct {
 // Executor is main struct for implementing balancer life cycle
 type Executor struct {
 	uc         balancer.Usecases
-	mapping    Mapping
+	mapping    *Mapping
 	history    model.History
 	httpClient httpClient
 	tickers    TickersConfig
@@ -36,7 +36,7 @@ type Executor struct {
 func New(config *Config) *Executor {
 	return &Executor{
 		uc: config.Usecases,
-		mapping: Mapping{
+		mapping: &Mapping{
 			mp: make(map[model.Range]model.Host),
 			mu: &sync.Mutex{},
 		},
@@ -70,6 +70,7 @@ func (ex Executor) RunMappingManager(ctx context.Context) {
 				ex.mapping.mu.Lock()
 				ex.mapping.mp = ranges
 				ex.mapping.mu.Unlock()
+				log.Printf("Successfully updated mapping.")
 			}
 		}
 	}()

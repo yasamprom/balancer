@@ -41,7 +41,7 @@ func (c *Client) GetMapping(ctx context.Context) (map[model.Range]model.Host, er
 		panic(err)
 	}
 
-	ranges := make([]model.MapPair, 0)
+	ranges := model.RangesNodePairs{}
 	err = json.Unmarshal(body, &ranges)
 	if err != nil {
 		log.Println(ctx, "failed to unmarshal response: %v", err)
@@ -50,9 +50,11 @@ func (c *Client) GetMapping(ctx context.Context) (map[model.Range]model.Host, er
 	log.Printf("got new ranges: %v", ranges)
 	res := make(map[model.Range]model.Host)
 
-	for _, v := range ranges {
-		res[model.Range{From: v.KeyRange.From, To: v.KeyRange.To}] = v.Address
+	for _, v := range ranges.Pairs {
+		res[model.Range{From: v.KeyRange.From, To: v.KeyRange.To}] = model.Host{Address: v.Host}
 	}
+	log.Printf("Got %v ranges\n", len(res))
+	log.Printf("Unmarshaled ranges:\n\n %v\n\n", res)
 	return res, nil
 }
 

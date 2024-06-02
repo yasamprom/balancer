@@ -12,10 +12,11 @@ import (
 
 func main() {
 	log.Println("Balancer: start main...")
+	log.Println("Listening balancer:8080...")
 	appCtx := context.Background()
 	slicerClient := slicer.New(
 		slicer.Config{
-			Host: "127.0.0.1", Port: "8000",
+			Host: "slicer", Port: "8080",
 		},
 	)
 	uc := balancer.NewUsecases(slicerClient)
@@ -30,4 +31,6 @@ func main() {
 	executor.RunMappingManager(appCtx)
 	executor.RunStateManager(appCtx)
 	executor.StartHandle(appCtx)
+	select {}
+
 }
